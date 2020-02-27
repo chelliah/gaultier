@@ -8,6 +8,9 @@ import Rect from "./Rect.js";
 import bgFrag from "./bg.frag.glsl";
 import warpFrag from "./warp.frag.glsl";
 
+const IMG_HEIGHT = 338;
+const IMG_WIDTH = 225;
+const MAX_SCALE = 2;
 const BASE_URL =
   "https://res.cloudinary.com/dhro0fkhc/image/upload/v1579735067/gaultier/";
 const BASE_FILE_TYPE = ".jpg";
@@ -30,6 +33,10 @@ export default {
       },
       pointer: {
         downTarget: 1,
+        hover: {
+          x: 0,
+          y: 0
+        },
         start: {
           x: 0,
           y: 0
@@ -63,6 +70,12 @@ export default {
     init() {
       this.width = window.innerWidth;
       this.height = window.innerHeight;
+
+      this.center = {
+        x: this.width / 2,
+        y: this.height / 2
+      };
+
 
       this.canvas = document.getElementById("bg-canvas");
       this.app = new PIXI.Application({ view: this.canvas });
@@ -119,6 +132,7 @@ export default {
     },
     initRects() {
       this.container = new PIXI.Container();
+      this.container.sortableChildren = true;
       this.app.stage.addChild(this.container);
 
       const graphics = new PIXI.Graphics();
@@ -130,21 +144,20 @@ export default {
 
       let minY = -this.height / 2;
 
-      this.center = {
-        x: this.width / 2,
-        y: this.height / 2
-      };
-
-      graphics.beginFill(0xaa22cc);
+ 
+      // graphics.beginFill(0xaa22cc);
 
       if (this.rects.length == 0) {
         for (let i = 0; i < 40; i++) {
+
           let intersects = true;
           let left, top;
           let numTries = 0;
 
-          while (intersects && numTries < 100) {
-            left = Math.random() * this.width * 2 - this.width / 2;
+          let pct = i/40
+
+          while (intersects && numTries < 200) {
+            left = pct * this.width * 2 - this.width / 2 + Math.random()*40;
             top = Math.random() * this.height * 2 - this.height / 2;
 
             intersects = this.rects.reduce((hasIntersected, rect) => {
@@ -152,14 +165,14 @@ export default {
               return rect.intersects({
                 left,
                 top,
-                right: left + minWidth,
-                height: top + minHeight
+                right: left + IMG_HEIGHT,
+                height: top + IMG_WIDTH
               });
             }, false);
             numTries += 1;
           }
 
-          this.rects.push(new Rect(i + 1, left, top, minWidth, minHeight));
+          this.rects.push(new Rect(i + 1, left, top, IMG_WIDTH, IMG_HEIGHT));
         }
       }
 
@@ -177,7 +190,7 @@ export default {
         graphics.drawRect(image.x, image.y, image.width, image.height);
       });
 
-      graphics.endFill();
+      // graphics.endFill();
 
       this.container.addChild(graphics);
 
@@ -186,8 +199,13 @@ export default {
       console.log("hiii", this.rects);
     },
     checkRectsAndImages() {
+      let mouse = {
+        x: this.pointer.hover.x - this.container.x,
+        y: this.pointer.hover.y - this.container.y
+      }
       this.rects.forEach((rect, index) => {
         const image = this.images[index];
+        
 
         if(this.rectIntersectsWIthViewport(rect)) {
 
@@ -199,6 +217,23 @@ export default {
           if(rect.loaded && image.alpha < 1) {
             image.alpha += 0.01
           }
+
+ 
+          let inXBounds = image.x <= mouse.x && image.x + image.width >= mouse.x;
+          let inYBounds = image.y <= mouse.y && image.y + image.height >= mouse.y;
+          if(inXBounds && inYBounds) {
+            // debugger;
+            // image.width = Math.min(400, image.width + 1);
+            rect.zIndex = 100
+            image.zIndex = 100
+          } else {
+            image.zIndex = 10
+            rect.zIndex = 10
+            // image.width = Math.max(200, image.width - 1);;
+          }
+
+
+
         } else {
           if(rect.discovered && !rect.loaded) {
             rect.discovered = false;
@@ -209,6 +244,22 @@ export default {
             image.alpha -= 0.01;
           }
         }
+
+          let imgCenter = {
+            x: image.x + image.width/2,
+            y: image.y + image.height/2
+          };
+
+          // let dist = Math.sqrt( Math.pow((mouse.x - imgCenter.x), 2),  Math.pow((mouse.y - imgCenter.y), 2))
+          let dist = Math.hypot(imgCenter.x - mouse.x, imgCenter.y - mouse.y)
+
+          let scale = Math.max((500 - Math.min(dist, 500))/300, 1);
+          // scale = 1;
+
+          image.width = IMG_WIDTH * scale;
+          image.height = IMG_HEIGHT * scale;
+          image.x = imgCenter.x - image.width/2;
+          image.y = imgCenter.y - image.height/2;
       })
     },
     rectIntersectsWIthViewport(rect) {
@@ -228,7 +279,14 @@ export default {
 
       const { signal } = rect.controller = new AbortController();
 
+      let img = new Image;
+      img.src = url;
+
+      img.onload
+      img.cande
+
       fetch(url, { signal }).then(response => {
+        // debugger;
         image.texture = new PIXI.Texture.from(response.url);
         rect.loaded = true;
       }).catch(() => console.warn('fetch image failed', url))
@@ -269,6 +327,11 @@ export default {
           x: diffX,
           y: diffY
         };
+      } else {
+        this.pointer.hover = {
+          x,
+          y
+        }
       }
     }
   }

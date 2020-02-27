@@ -1,3 +1,5 @@
+// import gsap, {Power1} from 'gsap';
+
 const BASE_URL =
   "https://res.cloudinary.com/dhro0fkhc/image/upload/v1579735067/gaultier/";
 const BASE_FILE_TYPE = ".jpg";
@@ -11,12 +13,22 @@ export default class Rect {
     this.width = width;
     this.height = height;
     this.scale = 1;
+    this.aspectRatio = 1;
     this.loaded = false;
     this.discovered = false;
     this.controller = null;
 
     // fetch(`${BASE_URL}${index}${BASE_FILE_TYPE}`)
   }
+
+  setScale(newScale) {
+    this.scale = newScale;
+    // gsap.to(this, 2, {
+    //   scale: scale,
+    //   ease: Power1.easeOut
+    // })
+  }
+  
 
   setPos(x, y) {
     this.x = x;
@@ -43,7 +55,9 @@ export default class Rect {
 
   intersects(rect2Bounds) {
     let {left, right, top, bottom } = this.getBoundingBox()
+        // return !(rect2Bounds.left > right - this.width/2 || rect2Bounds.right < left + this.width/2 || rect2Bounds.top > bottom - this.height/2 || rect2Bounds.bottom < top + this.height/2);
 
-    return !(rect2Bounds.left > right - this.width/2 || rect2Bounds.right < left + this.width/2 || rect2Bounds.top > bottom - this.height/2 || rect2Bounds.bottom < top + this.height/2);
+
+    return !(rect2Bounds.left > right - this.width/4 || rect2Bounds.right < left + this.width/4 || rect2Bounds.top > bottom - this.height/4 || rect2Bounds.bottom < top + this.height/4);
   } 
 }
